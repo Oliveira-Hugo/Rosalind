@@ -1,55 +1,57 @@
-function read_fasta(filename)
-    lines = readlines(filename)
-    sequences = Dict{String, String}()
-
-    current_label = ""
-    current_sequence = ""
-
-    for line in lines
-        if startswith(line, '>')
-            # A new sequence label is found
-            current_label = chop(line, head=1)  # Remove the '>' character
-            current_sequence = ""
-        else
-            # Append the current line to the current sequence
-            current_sequence *= strip(line)
-        end
-
-        # Store the current sequence in the dictionary
-        sequences[current_label] = current_sequence
-    end
-
-    return sequences
-end
-
-function longest_common_substring_multi(sequences)
+function LCS(sequences) 	#Longest Common Substring
     n = length(sequences)
     overall_max_length = 0
-    overall_common_substring = "No common substring"
+    overall_common_substring = Vector{Char}()
 
-    for i in 1:length(sequences[1])
-        for j in (i + overall_max_length):length(sequences[1])
-            substring_candidate = sequences[1][i:j]
+    for i in 1:length(sequences[1])	#Iterates in the elements of first sequence in "sequences"
+        for j in (i + overall_max_length):length(sequences[1])	#Limit the search for substrings longer than the current major LCS found
+            substring_candidate = sequences[1][i:j]	
 
-            if all(x -> contains(x, substring_candidate), sequences[2:end])
-                overall_max_length = length(substring_candidate)
-                overall_common_substring = substring_candidate
+            if all(x -> occursin(join(substring_candidate), join(x)), sequences[2:end])	#Search for the presence of substring candidate in all sequences, except for the first one
+                overall_max_length = length(substring_candidate) #Update the current LCS length
+                overall_common_substring = substring_candidate #Update the current LCS content
             end
         end
     end
 
-    return overall_common_substring
+    return join(overall_common_substring)
 end
 
-# Read sequences from the file
+function read_fasta(filename)
+	if !isfile("$filename")
+   	 error("'$filename' não é um arquivo")
+	end
+
+	input = open("$filename", "r")
+
+	#Every sequence (seq) is stored in a vector of chars (seqs)
+	global seqs = Vector{Vector{Char}}()
+	global seq = Vector{Char}()
+	global seq_descr = Vector{String}()
+
+	for line in eachline(input)
+    	if startswith(line, '>')
+        	if !isempty(seq)
+        	    push!(seqs, seq)    
+        	end
+        	push!(seq_descr, line[2:end])
+        	global seq = Vector{Char}()
+    	else 
+        	seq = vcat(seq, collect(line))
+    	end
+	end
+
+	if !isempty(seq)
+    	push!(seqs, seq)
+	end
+
+	close(input)
+	return seqs
+end
+
 filename = "i.txt"
-sequences = read_fasta(filename)
+seqs = read_fasta(filename)
 
-# Extract sequence contents
-sequence_contents = collect(values(sequences))
+result = LCS(seqs)
 
-# Find the longest common substring among all sequences
-result = longest_common_substring_multi(sequence_contents)
-
-# Print the overall longest common substring
 println("Longest common substring among all sequences: $result")
